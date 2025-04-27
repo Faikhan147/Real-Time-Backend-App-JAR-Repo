@@ -1,4 +1,4 @@
-FROM openjdk:17-alpine
+FROM openjdk:17-alpine3.16
 WORKDIR /app
 COPY target/JAR-Project-0.0.1-SNAPSHOT.jar JAR-api.jar
 EXPOSE 8080

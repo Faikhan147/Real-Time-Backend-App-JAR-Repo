@@ -16,4 +16,4 @@ spec:
       - name: prod-my-jar 
         image: faisalkhan35/my-jar 
         ports:
-        - containerPort: 3000
+        - containerPort: 8080

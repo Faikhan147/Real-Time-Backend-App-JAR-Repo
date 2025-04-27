@@ -7,6 +7,6 @@ spec:
     app: prod-my-jar
   ports:
     - protocol: TCP
-      port: 3000
-      targetPort: 3000
+      port: 80
+      targetPort: 8080
   type: LoadBalancer

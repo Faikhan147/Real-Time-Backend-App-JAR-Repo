@@ -33,7 +33,7 @@ pipeline {
                                 -Dsonar.projectName=${SONAR_PROJECT_NAME} \
                                 -Dsonar.sources=. \
                                 -Dsonar.java.binaries=target/classes \
-                                -Dsonar.host.url=http://13.232.219.106:9000"
+                                -Dsonar.host.url=http://3.108.61.218:9000"
                         }
                     }
                 }

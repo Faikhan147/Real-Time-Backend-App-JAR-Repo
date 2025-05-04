@@ -46,15 +46,20 @@ pipeline {
         }
 
  stage('Artifact Archiving') {
-            when {
-                expression { return fileExists('JAR-Project/target/*.jar') }
-            }
-            steps {
-                dir('JAR-Project') {
-                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-                }
+    steps {
+        script {
+            // Checking if any .jar file exists in the target folder
+            def jarFiles = sh(script: 'ls -l JAR-Project/target/*.jar', returnStdout: true).trim()
+
+            // If .jar files are found, archive them
+            if (jarFiles) {
+                archiveArtifacts artifacts: 'JAR-Project/target/*.jar', fingerprint: true
+            } else {
+                echo 'No JAR files found, skipping artifact archiving.'
             }
         }
+    }
+}
 
         stage('SonarQube Code Analysis') {
             steps {

@@ -8,7 +8,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE = "faisalkhan35/my-app"
+        DOCKER_IMAGE = "faisalkhan35/my-jar-app"
         SLACK_WEBHOOK_URL = credentials('slack-webhook')
         BACKEND_IMAGE_NAME = "faisalkhan35/my-jar-app"
         TAG = "${BUILD_NUMBER}"

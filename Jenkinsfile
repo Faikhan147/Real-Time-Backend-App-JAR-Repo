@@ -126,7 +126,7 @@ pipeline {
                             npm run test -- --coverage --reporters=default --reporters=jest-html-reporter || { echo 'Unit tests failed!'; exit 1; }
                         """
                         publishHTML(target: [
-                            reportDir: 'Application',
+                            reportDir: 'JAR-Project',
                             reportFiles: 'jest-html-report.html',
                             reportName: 'Jest Test Report'
                         ])

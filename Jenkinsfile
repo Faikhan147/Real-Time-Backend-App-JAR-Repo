@@ -46,6 +46,17 @@ pipeline {
             }
         }
 
+ stage('Artifact Archiving') {
+            when {
+                expression { return fileExists('JAR-Project/target/*.jar') }
+            }
+            steps {
+                dir('JAR-Project') {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
+        }
+
         stage('SonarQube Code Analysis') {
             steps {
                 withSonarQubeEnv('Sonar-Global-Token') {

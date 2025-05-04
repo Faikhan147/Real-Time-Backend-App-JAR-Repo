@@ -17,7 +17,7 @@ pipeline {
         SONAR_SCANNER_HOME = "/opt/sonar-scanner"
         IMAGE_NAME_TAG = "${BACKEND_IMAGE_NAME}:${TAG}"
         HELM_CHART_DIR = "helm/jar-app-chart"
-        JAR-APP_URL = credentials('jar-app-url')
+        JAR_APP_URL = credentials('jar-app-url')
     }
 
     stages {
@@ -247,9 +247,9 @@ stage('Monitor Deployment (Pods + Jar-App Health Check)') {
                 }
             }
             retry(3) {
-                withEnv(["JAR-APP_URL=${JAR-APP_URL}"]) {
+                withEnv(["JAR-APP_URL=${JAR_APP_URL}"]) {
                     sh '''#!/bin/bash
-                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$JAR-APP_URL")
+                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$JAR_APP_URL")
                         if [ "$STATUS_CODE" -ne 200 ]; then
                             echo "❌ Jar-App health check failed."
                             exit 1
@@ -319,9 +319,9 @@ stage('Monitor Deployment for Production (Pods + Jar-App Health Check)') {
                 }
             }
             retry(3) {
-                withEnv(["JAR-APP_URL=${JAR-APP_URL}"]) {
+                withEnv(["JAR_APP_URL=${JAR_APP_URL}"]) {
                     sh '''#!/bin/bash
-                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$JAR-APP_URL")
+                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$JAR_APP_URL")
                         if [ "$STATUS_CODE" -ne 200 ]; then
                             echo "❌ Jar-App health check failed."
                             exit 1

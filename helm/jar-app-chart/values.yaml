@@ -6,22 +6,23 @@ image:
   tag: "latest"
 
 # Readiness Probe Configuration
-readinessProbe:
-  httpGet:
-    path: /healthz
-    port: 8080
-  initialDelaySeconds: 5
-  periodSeconds: 5
-  failureThreshold: 3
+# readinessProbe:
+#   httpGet:
+#     path: /healthz
+#     port: 8080
+#   initialDelaySeconds: 5
+#   periodSeconds: 5
+#   failureThreshold: 3 
 
 # Liveness Probe Configuration
-livenessProbe:
-  httpGet:
-    path: /healthz
-    port: 8080
-  initialDelaySeconds: 15
-  periodSeconds: 10
-  failureThreshold: 3
+# livenessProbe:
+#   httpGet:
+#     path: /healthz
+#     port: 8080
+#   initialDelaySeconds: 15
+#   periodSeconds: 10
+#   failureThreshold: 3
+
 
 # Resources configuration
 resources:

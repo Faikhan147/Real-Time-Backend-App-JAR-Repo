@@ -3,21 +3,22 @@ pipeline {
 
     parameters {
         string(name: 'BRANCH', defaultValue: 'main', description: 'Branch to build')
-        string(name: 'REPO_URL', defaultValue: 'https://github.com/Faikhan147/Real-Time-Backend-App-JAR-Repo.git', description: 'Git repo URL')
+        string(name: 'REPO_URL', defaultValue: 'https://github.com/Faikhan147/Real-Time-Frontend-Website-Repo.git', description: 'Git repo URL')
         choice(name: 'ENVIRONMENT', choices: ['qa', 'staging', 'prod'], description: 'Select the environment to deploy')
     }
 
     environment {
-        DOCKER_IMAGE = "faisalkhan35/my-jar-app"
+        DOCKER_IMAGE = "faisalkhan35/my-website"
         SLACK_WEBHOOK_URL = credentials('slack-webhook')
-        BACKEND_IMAGE_NAME = "faisalkhan35/my-jar-app"
+        FRONTEND_IMAGE_NAME = "faisalkhan35/my-website"
         TAG = "${BUILD_NUMBER}"
-        SONAR_PROJECT_KEY = "Jar-App"
-        SONAR_PROJECT_NAME = "Backend-Jar-App"
+        SONAR_PROJECT_KEY = "Website"
+        SONAR_PROJECT_NAME = "Frontend-Website"
         SONAR_SCANNER_HOME = "/opt/sonar-scanner"
-        IMAGE_NAME_TAG = "${BACKEND_IMAGE_NAME}:${TAG}"
-        HELM_CHART_DIR = "helm/jar-app-chart"
-        JAR_APP_URL = credentials('jar-app-url')
+        IMAGE_NAME_TAG = "${FRONTEND_IMAGE_NAME}:${TAG}"
+        HELM_CHART_DIR = "helm/website-chart"
+        WEBSITE_URL = credentials('website-url')
+
     }
 
     stages {
@@ -34,37 +35,10 @@ pipeline {
             }
         }
 
-
-        // Build Maven Project using Maven Wrapper
-        stage('Build Maven Project') {
-            steps {
-                dir('JAR-Project') {
-                    sh "chmod +x ./mvnw"  // Giving execute permission
-                    sh "./mvnw clean package"  // Using Maven Wrapper
-                }
-            }
-        }
-
- stage('Artifact Archiving') {
-    steps {
-        script {
-            // Checking if any .jar file exists in the target folder
-            def jarFiles = sh(script: 'ls -l JAR-Project/target/*.jar', returnStdout: true).trim()
-
-            // If .jar files are found, archive them
-            if (jarFiles) {
-                archiveArtifacts artifacts: 'JAR-Project/target/*.jar', fingerprint: true
-            } else {
-                echo 'No JAR files found, skipping artifact archiving.'
-            }
-        }
-    }
-}
-
         stage('SonarQube Code Analysis') {
             steps {
                 withSonarQubeEnv('Sonar-Global-Token') {
-                    dir('JAR-Project') {
+                    dir('Website') {
                         script {
                             echo "Starting SonarQube scan..."
                             sh """
@@ -72,8 +46,7 @@ pipeline {
                                 -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                 -Dsonar.projectName=${SONAR_PROJECT_NAME} \
                                 -Dsonar.sources=. \
-                                -Dsonar.java.binaries=target/classes \
-                                -Dsonar.host.url=http://13.232.172.2:9000 -X
+                                -Dsonar.host.url=http://13.232.172.2:9000
                             """
                         }
                     }
@@ -92,7 +65,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                dir('JAR-Project') {
+                dir('Website') {
                     script {
                         def commitHash = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
                         echo "Building Docker image with commit hash: ${commitHash}"
@@ -121,20 +94,20 @@ pipeline {
 
         stage('Run Unit & Integration Tests') {
             when {
-                expression { fileExists('JAR-Project/package.json') }
+                expression { fileExists('Website/package.json') }
             }
             steps {
-                dir('JAR-Project') {
+                dir('Website') {
                     script {
                         echo "Running unit tests..."
                         sh """
                             npm install || { echo 'npm install failed!'; exit 1; }
                             npm install --save-dev jest-html-reporter
                             npm run test -- --coverage --reporters=default --reporters=jest-html-reporter || { echo 'Unit tests failed!'; exit 1; }
-                            npm audit fix --force
+                            npm audit fix
                         """
                         publishHTML(target: [
-                            reportDir: 'JAR-Project',
+                            reportDir: 'Website',
                             reportFiles: 'jest-html-report.html',
                             reportName: 'Jest Test Report'
                         ])
@@ -167,7 +140,7 @@ pipeline {
                     echo "Linting and testing Helm chart..."
                     sh """
                         helm lint ${HELM_CHART_DIR} || { echo 'Helm lint failed!'; exit 1; }
-                        helm template jar-app-${params.ENVIRONMENT} ${HELM_CHART_DIR} || { echo 'Helm template failed!'; exit 1; }
+                        helm template website-${params.ENVIRONMENT} ${HELM_CHART_DIR} || { echo 'Helm template failed!'; exit 1; }
                     """
                 }
             }
@@ -195,7 +168,7 @@ pipeline {
                     retry(3) {
                         echo "Deploying to ${params.ENVIRONMENT} environment..."
                         sh """
-                            helm upgrade --install jar-app-${params.ENVIRONMENT} ${HELM_CHART_DIR} \
+                            helm upgrade --install website-${params.ENVIRONMENT} ${HELM_CHART_DIR} \
                             --namespace ${params.ENVIRONMENT} \
                             --set ${chartValues} \
                             --set resources.requests.memory=128Mi \
@@ -216,13 +189,13 @@ stage('Rollback (if needed)') {
         script {
             echo "Checking if rollback is needed..."
 
-            def revisionCount = sh(script: "helm history jar-app-${params.ENVIRONMENT} --namespace ${params.ENVIRONMENT} | wc -l", returnStdout: true).trim().toInteger()
+            def revisionCount = sh(script: "helm history website-${params.ENVIRONMENT} --namespace ${params.ENVIRONMENT} | wc -l", returnStdout: true).trim().toInteger()
 
             // header + at least 2 revisions = 3 lines
             if (revisionCount >= 3) {
-                def lastRevision = sh(script: "helm history jar-app-${params.ENVIRONMENT} --namespace ${params.ENVIRONMENT} | tail -2 | head -1 | awk '{print \$1}'", returnStdout: true).trim()
+                def lastRevision = sh(script: "helm history website-${params.ENVIRONMENT} --namespace ${params.ENVIRONMENT} | tail -2 | head -1 | awk '{print \$1}'", returnStdout: true).trim()
                 echo "Rolling back to revision ${lastRevision}"
-                sh "helm rollback jar-app-${params.ENVIRONMENT} ${lastRevision} --namespace ${params.ENVIRONMENT}"
+                sh "helm rollback website-${params.ENVIRONMENT} ${lastRevision} --namespace ${params.ENVIRONMENT}"
             } else {
                 echo "Not enough revisions to perform rollback. Skipping."
             }
@@ -231,7 +204,7 @@ stage('Rollback (if needed)') {
 }
 
 // Monitoring Deployment for QA/Staging
-stage('Monitor Deployment (Pods + Jar-App Health Check)') {
+stage('Monitor Deployment (Pods + Website Health Check)') {
     when {
         expression { return params.ENVIRONMENT != 'prod' } // Only for QA/Staging
     }
@@ -253,11 +226,11 @@ stage('Monitor Deployment (Pods + Jar-App Health Check)') {
                 }
             }
             retry(3) {
-                withEnv(["JAR-APP_URL=${JAR_APP_URL}"]) {
+                withEnv(["WEBSITE_URL=${WEBSITE_URL}"]) {
                     sh '''#!/bin/bash
-                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$JAR_APP_URL")
+                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$WEBSITE_URL")
                         if [ "$STATUS_CODE" -ne 200 ]; then
-                            echo "❌ Jar-App health check failed."
+                            echo "❌ Website health check failed."
                             exit 1
                         fi
                     '''
@@ -289,7 +262,7 @@ stage('Monitor Deployment (Pods + Jar-App Health Check)') {
                     retry(3) {
                         echo "Deploying to Production..."
                         sh """
-                            helm upgrade --install jar-app-prod ${HELM_CHART_DIR} \
+                            helm upgrade --install website-prod ${HELM_CHART_DIR} \
                             --namespace prod \
                             --set ${chartValues} \
                             --set resources.requests.memory=128Mi \
@@ -303,7 +276,7 @@ stage('Monitor Deployment (Pods + Jar-App Health Check)') {
         }
 
 // Monitoring for Production Deployment
-stage('Monitor Deployment for Production (Pods + Jar-App Health Check)') {
+stage('Monitor Deployment for Production (Pods + Website Health Check)') {
     when {
         expression { return params.ENVIRONMENT == 'prod' }
     }
@@ -325,11 +298,11 @@ stage('Monitor Deployment for Production (Pods + Jar-App Health Check)') {
                 }
             }
             retry(3) {
-                withEnv(["JAR_APP_URL=${JAR_APP_URL}"]) {
+                withEnv(["WEBSITE_URL=${WEBSITE_URL}"]) {
                     sh '''#!/bin/bash
-                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$JAR_APP_URL")
+                        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$WEBSITE_URL")
                         if [ "$STATUS_CODE" -ne 200 ]; then
-                            echo "❌ Jar-App health check failed."
+                            echo "❌ Website health check failed."
                             exit 1
                         fi
                     '''
@@ -380,8 +353,8 @@ stage('Monitor Deployment for Production (Pods + Jar-App Health Check)') {
                     string(name: 'ENV', value: "${params.ENVIRONMENT}")
                 ]
                 
-                def lastRevision = sh(script: "helm history jar-app-${params.ENVIRONMENT} --namespace ${params.ENVIRONMENT} | tail -2 | head -1 | awk '{print \$1}'", returnStdout: true).trim()
-                sh "helm rollback jar-app-${params.ENVIRONMENT} ${lastRevision} --namespace ${params.ENVIRONMENT} || echo 'Rollback failed!'"
+                def lastRevision = sh(script: "helm history website-${params.ENVIRONMENT} --namespace ${params.ENVIRONMENT} | tail -2 | head -1 | awk '{print \$1}'", returnStdout: true).trim()
+                sh "helm rollback website-${params.ENVIRONMENT} ${lastRevision} --namespace ${params.ENVIRONMENT} || echo 'Rollback failed!'"
             }
         }
     }

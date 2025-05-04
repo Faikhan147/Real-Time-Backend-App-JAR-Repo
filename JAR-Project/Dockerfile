@@ -1,5 +1,4 @@
 FROM openjdk:17-jdk-slim
-RUN rm -rf /usr/local/tomcat/webapps/*
 RUN apt-get update && apt-get upgrade -y && apt-get clean
 WORKDIR /app
 COPY target/JAR-Project-0.0.1-SNAPSHOT.jar JAR-api.jar

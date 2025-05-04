@@ -1,0 +1,19 @@
+
+# service.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-jar-app-service
+  labels:
+    app: jar-app
+    release: {{ .Release.Name }}
+spec:
+  type: LoadBalancer   # ⭐ Yeh line add ki gayi hai
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    app: jar-app
+    release: {{ .Release.Name }}
+

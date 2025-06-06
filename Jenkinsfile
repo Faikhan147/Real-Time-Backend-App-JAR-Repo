@@ -260,7 +260,7 @@ stage('Rollback (if needed)') {
 }
 
 // Monitoring Deployment for QA/Staging
-stage('Monitor Deployment for QA/Staging (Pods + App Health Check)') {
+stage('Monitor Deployment for QA/Staging (Pods + Jar App Health Check)') {
     when {
         expression { return params.ENVIRONMENT != 'prod' } // Only for QA/Staging
     }
